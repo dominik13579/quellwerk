@@ -1,0 +1,245 @@
+Metadata-Version: 2.2
+Name: quellwerk
+Version: 3.2.0
+Summary: Local-first research workspace with inspectable hybrid RAG
+Requires-Python: <3.14,>=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: beautifulsoup4==4.13.4
+Requires-Dist: fastapi==0.115.12
+Requires-Dist: httpx==0.28.1
+Requires-Dist: numpy==1.26.4
+Requires-Dist: pydantic==2.11.4
+Requires-Dist: python-dotenv==1.1.0
+Requires-Dist: rank-bm25==0.2.2
+Requires-Dist: sentence-transformers==4.1.0
+Requires-Dist: uvicorn[standard]==0.34.2
+Requires-Dist: youtube-transcript-api==1.0.3
+Provides-Extra: test
+Requires-Dist: pytest==8.3.5; extra == "test"
+Requires-Dist: pytest-asyncio==0.26.0; extra == "test"
+Requires-Dist: pytest-cov==6.1.1; extra == "test"
+Requires-Dist: pytest-playwright==0.7.0; extra == "test"
+Requires-Dist: respx==0.22.0; extra == "test"
+
+# Quellwerk
+
+> **20-second pitch:** Quellwerk is a local-first research workspace for PDFs, websites, YouTube transcripts, text and notes. It combines BM25 with multilingual embeddings and optional cross-encoder reranking, streams source-grounded answers, and lets users jump from every citation to the exact page, timestamp or text passage.
+
+[![CI](https://github.com/dominik13579/quellwerk/actions/workflows/ci.yml/badge.svg)](https://github.com/dominik13579/quellwerk/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-01696f.svg)](LICENSE)
+
+<!-- Replace these before publishing. -->
+**[Live demo](https://YOUR-DEMO-URL.example)** · **[60-second video](https://YOUR-VIDEO-URL.example)**
+
+![Quellwerk source-grounded research flow](docs/quellwerk-demo.gif)
+
+## Why it exists
+
+General chat interfaces make it difficult to inspect why an answer was produced. Quellwerk keeps original sources, retrieval results and citations connected: a citation opens the corresponding PDF page, YouTube timestamp or highlighted passage.
+
+## Highlights
+
+- Multi-source ingestion: PDF, website, YouTube, pasted text and notes.
+- Hybrid retrieval: BM25 + multilingual E5 embeddings + Reciprocal Rank Fusion + optional cross-encoder reranking.
+- Streaming answers over Server-Sent Events.
+- Inspectable citations with source-type-specific locators.
+- Local-first browser persistence through IndexedDB.
+- Hardened website imports with URL/IP validation, per-hop redirect validation, HTML-only imports and byte limits.
+- Server-side model allowlist, output-token cap, per-minute rate limit and daily demo limit.
+- Unit, integration and Playwright browser tests plus a bilingual RAG evaluation harness.
+
+## Demo
+
+The recommended public demo is deliberately restricted:
+
+- It starts with the notebook in `demo/notebook.json`.
+- User uploads/imports are disabled with `ALLOW_USER_SOURCES=0`.
+- Only models in `ALLOWED_MODELS` are accepted by the backend.
+- `MAX_OUTPUT_TOKENS`, `RATE_LIMIT_PER_MINUTE` and `DAILY_CHAT_LIMIT` bound usage.
+- The API key exists only as a host secret.
+
+This is a portfolio demo, not a multi-tenant production service. Do not upload confidential documents.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Browser UI] -->|sources + query| API[FastAPI]
+    U --> DB[(IndexedDB)]
+    API --> I[Import security]
+    I --> W[Web / YouTube]
+    API --> R[Hybrid retrieval]
+    R --> B[BM25]
+    R --> E[Multilingual embeddings]
+    R --> X[Cross-encoder reranker]
+    API --> P[OpenRouter adapter]
+    P -->|SSE tokens + citations| U
+```
+
+### Query path
+
+1. The browser turns every source into chunks with typed locators.
+2. The backend retrieves candidates with BM25 and optional dense embeddings.
+3. Reciprocal Rank Fusion combines rankings; the cross-encoder can rerank candidates.
+4. Only top passages enter the model context.
+5. Tokens and retrieval metadata stream to the browser; citation clicks reopen the source locator.
+
+## Quickstart
+
+### Docker
+
+```bash
+cp .env.example .env
+# Add OPENROUTER_API_KEY to .env
+docker compose up --build
+```
+
+Open <http://localhost:8000>. Stop with `docker compose down`.
+
+### Local Python
+
+Python 3.12 is recommended.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e '.[test]'
+cp .env.example .env
+uvicorn app:app --reload
+```
+
+The first full RAG query can download embedding and reranker models. For a lightweight deterministic BM25-only run, set `RAG_DISABLE_MODELS=1`.
+
+## Tests
+
+Install browser binaries once:
+
+```bash
+python -m playwright install chromium
+```
+
+Run the fast suite during development:
+
+```bash
+pytest -m 'not e2e and not live'
+```
+
+Run one area or one exact test:
+
+```bash
+pytest tests/test_security.py -v
+pytest tests/test_retrieval.py::test_retrieve_bm25_returns_relevant_chunk_first -v
+```
+
+Run coverage:
+
+```bash
+pytest -m 'not e2e and not live' --cov=app --cov-report=term-missing --cov-report=html
+# Open htmlcov/index.html
+```
+
+Run the browser flow headlessly or visibly:
+
+```bash
+pytest -m e2e --browser chromium
+pytest -m e2e --browser chromium --headed --slowmo 300
+```
+
+The Playwright test starts its own FastAPI server and mocks `/api/chat`, so it needs no provider key and incurs no cost. It executes **text import → question → streamed answer → citation click → passage highlight**. CI runs the same suites on every push and pull request and uploads traces/screenshots when the browser test fails.
+
+## RAG evaluation
+
+The repository includes a small manually checked, fictional corpus with German and English answerable/unanswerable questions. Fictional facts make the gold labels unambiguous and avoid redistributing private or copyrighted documents.
+
+Deterministic retrieval baseline:
+
+```bash
+RAG_DISABLE_MODELS=1 python evaluation/run.py
+cat evaluation/results/metrics.json
+```
+
+Full answer evaluation against a running instance:
+
+```bash
+python evaluation/run.py --live-url http://localhost:8000 --model openrouter/free
+# Review evaluation/results/human_review.csv
+python evaluation/summarize_review.py
+```
+
+The run documents Recall@1/3/5, MRR, retrieval and answer latency, citation precision, groundedness and error rate. Automated groundedness is labeled as a proxy; portfolio claims should use the completed human review. See [`evaluation/README.md`](evaluation/README.md) for the scoring protocol.
+
+### Results
+
+The tiny BM25 smoke run achieved Recall@1/3/5 and MRR of 1.00 with no retrieval errors on this deliberately simple 12-question fixture. Treat this as regression evidence, not a general quality claim; latency is omitted because a local micro-benchmark is hardware-dependent. Run and review the hybrid answer evaluation before publishing stronger portfolio claims.
+
+| Run | Retrieval mode | Recall@5 | MRR | Citation precision | Groundedness | Mean answer latency | Error rate |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 2026-10-01 local smoke run | BM25 baseline | 1.00 | 1.00 | — | — | — | 0.00 |
+| Pending human review | Hybrid + reranker | — | — | — | — | — | — |
+
+## Security model
+
+### Protected
+
+- OpenRouter credentials stay in environment variables on the server.
+- Website import accepts only HTTP(S) ports 80/443 with no URL credentials.
+- DNS results must be globally routable; every redirect destination is revalidated.
+- Website responses must be HTML and remain below `MAX_IMPORT_BYTES`.
+- Chat requests have context, model, output-token and rate limits.
+- Rendered model/source text is HTML-escaped before insertion.
+
+### Trust boundaries
+
+- Imported documents are untrusted content and may contain prompt-injection attempts.
+- OpenRouter receives the retrieved source passages needed to answer a question.
+- IndexedDB is local to the browser profile; it is not encrypted by Quellwerk.
+- The in-memory rate limiter is suitable for a single demo process, not distributed production.
+
+For a real multi-user release, add authentication, durable per-user quotas, a reverse proxy/WAF, isolated ingestion workers, malware scanning, encrypted server persistence, audit logs and provider-level budget alerts.
+
+## Trade-offs
+
+| Decision | Benefit | Cost / next step |
+|---|---|---|
+| Browser-side PDF parsing | Files remain local for viewing | Large PDFs consume client memory; add a worker and strict byte limit. |
+| IndexedDB | No account or database required | No cross-device sync or collaboration. |
+| Client-provided chunks | Simple local-first MVP | Payloads are large and ingestion repeats; move indexing server-side for scale. |
+| OpenRouter | Fast access to multiple models | External data processor, cost and availability dependency. |
+| Optional model fallback | App can run BM25-only | Retrieval mode must be visible in production telemetry. |
+| Vanilla JS | Small stack and transparent behavior | `app.js` should be split into modules as the product grows. |
+
+## Known limitations
+
+- PDF extraction does not yet include OCR, tables or layout-aware reading order.
+- Website extraction is heuristic and some sites disallow crawling or embedding.
+- The benchmark is intentionally small and should not be presented as general model research.
+- Daily quotas reset in process memory and do not coordinate across replicas.
+- There is no authentication or collaboration layer.
+- Prompt-injection defenses need a larger adversarial evaluation before handling sensitive workflows.
+
+## Roadmap
+
+- [ ] Claim Ledger: claim-by-claim supporting, conflicting or missing evidence.
+- [ ] Citation Inspector with scores, selected passage and user feedback.
+- [ ] Persisted document index and embedding cache.
+- [ ] OCR and layout-aware PDF parsing.
+- [ ] Authentication, durable quotas and per-user notebooks.
+- [ ] OpenTelemetry metrics/traces and provider cost dashboard.
+- [ ] Accessibility audit and keyboard-complete dialogs/source rows.
+
+## Repository hygiene
+
+Before the first push:
+
+```bash
+./scripts/check-secrets.sh
+git status --ignored
+```
+
+If an API key was ever committed, removing the file in a later commit is not enough: rotate the key and purge it from Git history. Store deployment keys in the hosting provider's secret manager; GitHub Actions secrets are only needed when a workflow itself deploys or calls a protected service.
+
+## Contributing and license
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), the [security policy](.github/SECURITY.md), and the [MIT license](LICENSE).

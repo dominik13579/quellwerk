@@ -1,0 +1,12 @@
+LICENSE
+README.md
+app.py
+pyproject.toml
+quellwerk.egg-info/PKG-INFO
+quellwerk.egg-info/SOURCES.txt
+quellwerk.egg-info/dependency_links.txt
+quellwerk.egg-info/requires.txt
+quellwerk.egg-info/top_level.txt
+tests/test_api.py
+tests/test_retrieval.py
+tests/test_security.py

@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools==75.8.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quellwerk"
+version = "3.2.0"
+description = "Local-first research workspace with inspectable hybrid RAG"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "beautifulsoup4==4.13.4",
+  "fastapi==0.115.12",
+  "httpx==0.28.1",
+  "numpy==1.26.4",
+  "pydantic==2.11.4",
+  "python-dotenv==1.1.0",
+  "rank-bm25==0.2.2",
+  "sentence-transformers==4.1.0",
+  "uvicorn[standard]==0.34.2",
+  "youtube-transcript-api==1.0.3",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest==8.3.5",
+  "pytest-asyncio==0.26.0",
+  "pytest-cov==6.1.1",
+  "pytest-playwright==0.7.0",
+  "respx==0.22.0",
+]
+
+[tool.setuptools]
+py-modules = ["app"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+  "unit: deterministic unit tests",
+  "integration: API tests with mocked network dependencies",
+  "e2e: browser tests",
+  "live: tests that use a real model provider",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 75

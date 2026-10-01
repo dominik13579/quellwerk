@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+
+<html data-theme="light" lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>Quellwerk — Quellenbasierte Recherche</title>
+<link crossorigin="" href="https://api.fontshare.com" rel="preconnect"/>
+<link href="./static/style.css" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&amp;f[]=zodiak@500,600&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</link></head>
+<body>
+<div class="app">
+<header class="top">
+<button aria-label="Quellen öffnen" class="iconbtn mobile-only" id="sourcesToggle">
+<i data-lucide="panel-left"></i>
+</button>
+<div class="brand">
+<svg aria-hidden="true" fill="none" height="26" viewbox="0 0 32 32" width="26">
+<path d="M6 5.5C6 4.67 6.67 4 7.5 4H24a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H7.5C6.67 28 6 27.33 6 26.5V5.5Z" stroke="currentColor" stroke-width="2"></path>
+<path d="M11 4v24" stroke="currentColor" stroke-width="2"></path>
+<circle cx="18.5" cy="14" r="3.2" stroke="currentColor" stroke-width="2"></circle>
+<path d="m21 16.5 2.5 2.5" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path></svg>Quellwerk
+        </div>
+<div class="spacer"></div>
+<div class="backend-status" id="backendStatus" title="Python-Backend">
+<span>Backend prüfen…</span>
+</div>
+<button aria-label="KI-Einstellungen" class="iconbtn" id="settingsBtn">
+<i data-lucide="key-round"></i></button><button aria-label="Farbschema wechseln" class="iconbtn" id="themeBtn">
+<i data-lucide="moon"></i></button><button aria-label="Chat öffnen" class="iconbtn mobile-only" id="chatToggle">
+<i data-lucide="message-square"></i>
+</button>
+</header>
+<aside class="sources" id="sourcesPanel">
+<div class="sources-head">
+<h2>Quellen</h2>
+<span class="count" id="sourceCount">0 / 20</span>
+</div>
+<button class="add-source" id="addSource">
+<i data-lucide="plus"></i> Quelle hinzufügen
+        </button>
+<div class="source-list" id="sourceList"></div>
+<div class="budget" id="wordBudget">0 / 500.000 Wörter</div>
+</aside>
+<main class="main">
+<section class="viewer" id="viewer">
+<div class="viewer-empty">
+<i data-lucide="library-big"></i>
+<h1>Deine Quelle im Mittelpunkt</h1>
+<p>
+              Links verwaltest du Quellen, in der Mitte siehst du das Original
+              und rechts fragst du die KI.
+            </p>
+</div>
+</section>
+<section class="chat" id="chatPanel">
+<div class="tabs">
+<button class="active" data-tab="chat">KI-Chat</button><button data-tab="notes">Notizen</button>
+</div>
+<div class="chat-log" id="chatLog"></div>
+<div class="chat-composer" id="composerWrap">
+<div class="scope">
+<button class="active" data-scope="all">Alle Quellen</button><button data-scope="active">Aktive Quelle</button>
+</div>
+<form class="composer" id="chatForm">
+<textarea id="chatInput" placeholder="Frage zu deinen Quellen…" rows="1"></textarea><button aria-label="Senden" class="send">
+<i data-lucide="arrow-up"></i>
+</button>
+</form>
+</div>
+<div class="notes" id="notes">
+<textarea class="note-input" id="noteInput" placeholder="Eigene Notiz…"></textarea>
+<button class="primary" id="saveNote" style="margin-top: 8px">Notiz speichern</button>
+<p class="notes-hint">Gespeicherte Notizen kannst du direkt als KI-Quelle verwenden.</p>
+<div id="noteList"></div>
+</div>
+</section>
+</main>
+</div>
+<div class="modal-bg" id="sourceModal">
+<div class="modal">
+<div class="modal-head">
+<h2>Quelle hinzufügen</h2>
+<button class="iconbtn" data-close=""><i data-lucide="x"></i></button>
+</div>
+<div class="modal-body">
+<div class="limit-row">
+<span>Dokumente: <strong id="modalDocs">0/20</strong></span><span>Wörter: <strong id="modalWords">0/500k</strong></span>
+</div>
+<div class="types">
+<button class="type active" data-type="pdf">
+<i data-lucide="file-text"></i><span><strong>PDF</strong><small>Datei hochladen</small></span></button><button class="type" data-type="web">
+<i data-lucide="globe"></i><span><strong>Webseite</strong><small>URL analysieren</small></span></button><button class="type" data-type="youtube">
+<i data-lucide="youtube"></i><span><strong>YouTube</strong><small>Transkript automatisch</small></span></button><button class="type" data-type="text">
+<i data-lucide="type"></i><span><strong>Text</strong><small>Text einfügen</small></span>
+</button>
+</div>
+<div class="source-input" id="inputPdf">
+<button class="drop" id="fileDrop">
+<span><i data-lucide="upload-cloud"></i><span id="fileLabel">PDFs hierher ziehen oder auswählen</span></span></button><input accept="application/pdf,.pdf" hidden="" id="fileInput" multiple type="file"/>
+<p class="hint">
+              Die PDFs bleiben für die Originalansicht im Browser verfügbar. Bis zu 20 Dateien können gleichzeitig ausgewählt oder abgelegt werden.
+            </p>
+</div>
+<div class="source-input" hidden="" id="inputWeb">
+<div class="field">
+<label for="webUrl">Webseiten-URL</label><input id="webUrl" placeholder="https://…" type="url"/>
+</div>
+<p class="hint">
+              Der Text wird für die KI extrahiert; in der Mitte wird die Website
+              eingebettet. Manche Websites verhindern Einbettung — dann steht
+              „extern öffnen“ bereit.
+            </p>
+</div>
+<div class="source-input" hidden="" id="inputYoutube">
+<div class="field">
+<label for="youtubeUrl">YouTube-Link</label><input id="youtubeUrl" placeholder="https://youtube.com/watch?v=…" type="url"/>
+</div>
+<div class="connection-box">
+              Das Transkript wird beim Hinzufügen automatisch über das
+              Python-Backend geladen. Kein manuelles Einfügen mehr.
+            </div>
+</div>
+<div class="source-input" hidden="" id="inputText">
+<div class="field">
+<label for="textTitle">Titel</label><input id="textTitle" placeholder="Titel"/>
+</div>
+<div class="field">
+<label for="textBody">Text</label><textarea id="textBody" placeholder="Text einfügen…"></textarea>
+</div>
+</div>
+<div class="modal-actions">
+<button class="ghost" data-close="">Abbrechen</button><button class="primary" id="saveSource">Hinzufügen</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal-bg" id="settingsModal">
+<div class="modal" style="max-width: 500px">
+<div class="modal-head">
+<h2>KI-Einstellungen</h2>
+<button class="iconbtn" data-close=""><i data-lucide="x"></i></button>
+</div>
+<div class="modal-body">
+<div class="connection-box">Der OpenRouter-Schlüssel liegt ausschließlich als <code>OPENROUTER_API_KEY</code> im Backend.</div>
+<div class="field">
+<label for="modelSelect">Kostenloses Modell</label><select id="modelSelect">
+<option value="openrouter/free">
+                Free Models Router — automatisch &amp; stabil
+              </option>
+</select>
+</div>
+<p class="hint">Die Modellliste wird über das Backend geladen. Wenn ein Modell nicht verfügbar ist, wähle den Free Models Router.</p>
+<div class="modal-actions">
+<button class="ghost" data-close="">Schließen</button><button class="primary" id="saveSettings">Speichern</button>
+</div>
+</div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="./static/app.js"></script>
+</body>
+</html>

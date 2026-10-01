@@ -1,0 +1,16 @@
+{
+  "sources": [
+    {
+      "type": "text",
+      "title": "Quellwerk – Demo-Handbuch",
+      "meta": "Vorinstallierte Demoquelle",
+      "text": "Quellwerk ist ein local-first Recherche-Workspace. Es kombiniert lexikalisches BM25-Retrieval mit mehrsprachigen Embeddings und optionalem Cross-Encoder-Reranking. Antworten sollen ausschließlich auf ausgewählten Quellen beruhen und anklickbare Fundstellen enthalten. PDF-Fundstellen verweisen auf Seiten, YouTube-Fundstellen auf Zeitpunkte und Textfundstellen auf hervorgehobene Passagen. In der öffentlichen Demo sind eigene Uploads deaktiviert und das Modell sowie Ausgabelimits werden serverseitig kontrolliert."
+    },
+    {
+      "type": "text",
+      "title": "Quellwerk – Security Notes",
+      "meta": "Preinstalled English demo source",
+      "text": "Website imports reject private network addresses, non-HTTP schemes, credentials in URLs and non-standard ports. Redirects are processed manually and every destination is validated again. Imports accept HTML only and stop when the configured byte limit is exceeded. API keys remain on the server and are never exposed to the browser."
+    }
+  ]
+}

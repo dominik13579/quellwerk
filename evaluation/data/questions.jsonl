@@ -1,0 +1,12 @@
+{"id":"de-a1","language":"de","question":"Wie viel Strom erzeugte der Solarpark Nordlicht 2025?","answerable":true,"relevant_chunk_ids":["de-energy-1"],"expected_facts":["120 Gigawattstunden"]}
+{"id":"de-a2","language":"de","question":"Wie hoch waren die Wartungskosten von Küstenstrom?","answerable":true,"relevant_chunk_ids":["de-energy-2"],"expected_facts":["14 Millionen Euro"]}
+{"id":"de-a3","language":"de","question":"Wie viele Fahrgäste hatte die Buslinie M42 pro Werktag?","answerable":true,"relevant_chunk_ids":["de-mobility-1"],"expected_facts":["18.000"]}
+{"id":"de-a4","language":"de","question":"In welchem Takt fuhr die Straßenbahnlinie T7?","answerable":true,"relevant_chunk_ids":["de-mobility-2"],"expected_facts":["Zehn-Minuten-Takt"]}
+{"id":"de-u1","language":"de","question":"Wer leitete den Solarpark Nordlicht?","answerable":false,"relevant_chunk_ids":[],"expected_facts":[]}
+{"id":"de-u2","language":"de","question":"Wie hoch war der Ticketpreis der Buslinie M42?","answerable":false,"relevant_chunk_ids":[],"expected_facts":[]}
+{"id":"en-a1","language":"en","question":"How many trees did Northbridge plant in 2025?","answerable":true,"relevant_chunk_ids":["en-climate-1"],"expected_facts":["42,000 trees"]}
+{"id":"en-a2","language":"en","question":"By what percentage did municipal building emissions fall?","answerable":true,"relevant_chunk_ids":["en-climate-2"],"expected_facts":["18 percent"]}
+{"id":"en-a3","language":"en","question":"What evidence states can Aster reviewers assign?","answerable":true,"relevant_chunk_ids":["en-research-1"],"expected_facts":["supporting","conflicting","insufficient"]}
+{"id":"en-a4","language":"en","question":"What does Aster store in an answer snapshot?","answerable":true,"relevant_chunk_ids":["en-research-2"],"expected_facts":["model name","prompt version","document hash","retrieval results","generation timestamp"]}
+{"id":"en-u1","language":"en","question":"What was Northbridge's tree planting budget?","answerable":false,"relevant_chunk_ids":[],"expected_facts":[]}
+{"id":"en-u2","language":"en","question":"Which database engine does Aster use?","answerable":false,"relevant_chunk_ids":[],"expected_facts":[]}

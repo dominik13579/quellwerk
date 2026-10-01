@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.venv
+__pycache__
+.pytest_cache
+.coverage
+htmlcov
+test-results
+playwright-report
+evaluation/results
+*.pyc
