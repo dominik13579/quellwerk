@@ -181,7 +181,7 @@ function renderSources() {
         .join("")
     : '<p class="source-empty">Noch keine Quellen.</p>';
   $("#sourceCount").textContent = `${state.sources.length} / ${LIMITS.docs}`;
-  $("#modalDocs").textContent = `${state.sources.length}/${LIMITS.docs}`;
+  $("#modalDocs")?.textContent = `${state.sources.length}/${LIMITS.docs}`;
   $("#wordBudget").textContent =
     `${totalWords().toLocaleString("de")} / ${LIMITS.totalWords.toLocaleString("de")} Wörter`;
   $("#modalWords").textContent = `${Math.round(totalWords() / 1000)}k/500k`;
@@ -315,7 +315,12 @@ function makeChunks(source) {
       section:
         source.sections?.find((x) => c.start >= x.start && c.start <= x.end)
           ?.heading || null,
-      label: source.type === "web" ? "Abschnitt" : source.type === "note" ? `Notiz · Absatz ${i + 1}` : `Absatz ${i + 1}`,
+      label:
+        source.type === "web"
+          ? "Abschnitt"
+          : source.type === "note"
+            ? `Notiz · Absatz ${i + 1}`
+            : `Absatz ${i + 1}`,
     },
   }));
 }
@@ -353,7 +358,6 @@ async function apiJson(path, body, method = "POST") {
   return data;
 }
 
-
 async function loadRuntimeConfig() {
   try {
     const config = await apiJson("/api/config", null, "GET");
@@ -388,7 +392,10 @@ async function loadDemoNotebookIfEmpty() {
 
 async function buildPdfSource(file, index, total) {
   const button = $("#saveSource");
-  button.textContent = total > 1 ? `PDF ${index + 1}/${total} wird verarbeitet…` : "PDF wird verarbeitet…";
+  button.textContent =
+    total > 1
+      ? `PDF ${index + 1}/${total} wird verarbeitet…`
+      : "PDF wird verarbeitet…";
   const result = await extractPdf(file);
   return {
     type: "pdf",
@@ -403,12 +410,16 @@ async function buildPdfSource(file, index, total) {
 
 function validateNewSources(sources) {
   if (state.sources.length + sources.length > LIMITS.docs)
-    throw new Error(`Dokumentenlimit überschritten. Es sind noch ${Math.max(0, LIMITS.docs - state.sources.length)} Quellen frei.`);
+    throw new Error(
+      `Dokumentenlimit überschritten. Es sind noch ${Math.max(0, LIMITS.docs - state.sources.length)} Quellen frei.`,
+    );
   let words = totalWords();
   for (const source of sources) {
     const count = wordCount(source.text);
     if (count > LIMITS.docWords)
-      throw new Error(`„${source.title}“ überschreitet das Wortlimit pro Quelle.`);
+      throw new Error(
+        `„${source.title}“ überschreitet das Wortlimit pro Quelle.`,
+      );
     words += count;
     if (words > LIMITS.totalWords)
       throw new Error("Gesamt-Wortlimit überschritten.");
@@ -423,28 +434,57 @@ async function addSource() {
   const prepared = [];
   try {
     if (type === "pdf") {
-      if (!state.pendingFiles.length) throw new Error("Bitte mindestens eine PDF auswählen.");
+      if (!state.pendingFiles.length)
+        throw new Error("Bitte mindestens eine PDF auswählen.");
       if (state.sources.length + state.pendingFiles.length > LIMITS.docs)
-        throw new Error(`Dokumentenlimit überschritten. Es sind noch ${Math.max(0, LIMITS.docs - state.sources.length)} Quellen frei.`);
+        throw new Error(
+          `Dokumentenlimit überschritten. Es sind noch ${Math.max(0, LIMITS.docs - state.sources.length)} Quellen frei.`,
+        );
       for (let i = 0; i < state.pendingFiles.length; i++)
-        prepared.push(await buildPdfSource(state.pendingFiles[i], i, state.pendingFiles.length));
+        prepared.push(
+          await buildPdfSource(
+            state.pendingFiles[i],
+            i,
+            state.pendingFiles.length,
+          ),
+        );
     }
     if (type === "web") {
       const url = $("#webUrl").value.trim();
       if (!url) throw new Error("Bitte eine URL eingeben.");
       const result = await apiJson("/api/scrape", { url });
-      prepared.push({ type, title: result.title, meta: "Webseite · Originalansicht", text: result.text, url: result.url, sections: result.sections });
+      prepared.push({
+        type,
+        title: result.title,
+        meta: "Webseite · Originalansicht",
+        text: result.text,
+        url: result.url,
+        sections: result.sections,
+      });
     }
     if (type === "youtube") {
       const url = $("#youtubeUrl").value.trim();
       if (!url) throw new Error("Bitte einen YouTube-Link eingeben.");
       const result = await apiJson("/api/youtube", { url });
-      prepared.push({ type, title: result.title, meta: `YouTube · ${result.language}`, text: result.text, url, videoId: result.video_id, segments: result.segments });
+      prepared.push({
+        type,
+        title: result.title,
+        meta: `YouTube · ${result.language}`,
+        text: result.text,
+        url,
+        videoId: result.video_id,
+        segments: result.segments,
+      });
     }
     if (type === "text") {
       const text = $("#textBody").value.trim();
       if (!text) throw new Error("Bitte Text einfügen.");
-      prepared.push({ type, title: $("#textTitle").value.trim() || "Textquelle", meta: "Text", text });
+      prepared.push({
+        type,
+        title: $("#textTitle").value.trim() || "Textquelle",
+        meta: "Text",
+        text,
+      });
     }
     validateNewSources(prepared);
     for (const draft of prepared) {
@@ -457,9 +497,15 @@ async function addSource() {
     $("#sourceModal").classList.remove("open");
     resetSourceForm();
     await saveNotebook();
-    toast(prepared.length > 1 ? `${prepared.length} PDFs hinzugefügt` : "Quelle hinzugefügt");
+    toast(
+      prepared.length > 1
+        ? `${prepared.length} PDFs hinzugefügt`
+        : "Quelle hinzugefügt",
+    );
   } catch (error) {
-    prepared.forEach((source) => source.objectUrl && URL.revokeObjectURL(source.objectUrl));
+    prepared.forEach(
+      (source) => source.objectUrl && URL.revokeObjectURL(source.objectUrl),
+    );
     toast(error.message);
   } finally {
     button.disabled = false;
@@ -642,7 +688,9 @@ async function ask(query) {
 function renderNotes() {
   $("#noteList").innerHTML = state.notes
     .map((n) => {
-      const linked = state.sources.find((s) => s.type === "note" && s.noteId === n.id);
+      const linked = state.sources.find(
+        (s) => s.type === "note" && s.noteId === n.id,
+      );
       return `<article class="note-card"><div class="note-text">${escapeHtml(n.text)}</div><div class="note-meta"><span>${escapeHtml(n.time)}</span><div class="note-actions"><button class="note-source" data-note-source="${n.id}"><i data-lucide="${linked ? "external-link" : "library-big"}"></i>${linked ? "Quelle öffnen" : "Als Quelle"}</button><button class="note-delete" data-delete-note="${n.id}" aria-label="Notiz löschen"><i data-lucide="trash-2"></i></button></div></div></article>`;
     })
     .join("");
@@ -651,7 +699,9 @@ function renderNotes() {
 function addNoteAsSource(noteId) {
   const note = state.notes.find((n) => n.id === noteId);
   if (!note) return;
-  const linked = state.sources.find((s) => s.type === "note" && s.noteId === noteId);
+  const linked = state.sources.find(
+    (s) => s.type === "note" && s.noteId === noteId,
+  );
   if (linked) {
     openSource(linked.id);
     toast("Notizquelle geöffnet");
