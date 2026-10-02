@@ -359,16 +359,16 @@ async function loadRuntimeConfig() {
     const config = await apiJson("/api/config", null, "GET");
 
     state.demoMode = Boolean(config.demo_mode);
-    state.allowUserSources = config.allow_user_sources !== false;
+    state.allowUserSources = config.allow_user_sources;
 
-    if (!state.allowUserSources) {
-      $("#addSource").hidden = true;
-      $("#sourceModal").remove();
-    }
+    $("#addSource").hidden = !state.allowUserSources;
 
     return config;
   } catch (error) {
-    console.error("Runtime-Konfiguration konnte nicht geladen werden:", error);
+    console.error(
+      "Runtime-Konfiguration konnte nicht geladen werden:",
+      error,
+    );
     return null;
   }
 }
