@@ -53,8 +53,8 @@ app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 
 _requests: dict[str, deque[float]] = defaultdict(deque)
 _daily_chats: dict[str, tuple[str, int]] = {}
-_embedder: Any = None
-_reranker: Any = None
+# _embedder: Any = None
+# _reranker: Any = None
 
 
 class UrlRequest(BaseModel):
@@ -263,27 +263,27 @@ def split_with_offsets(text: str, target: int = 900, overlap: int = 120) -> list
     return chunks
 
 
-def reciprocal_rank_fusion(rankings: list[list[int]], k: int = 60) -> dict[int, float]:
-    scores: dict[int, float] = defaultdict(float)
-    for ranking in rankings:
-        for rank, index in enumerate(ranking, 1):
-            scores[index] += 1.0 / (k + rank)
-    return scores
+# def reciprocal_rank_fusion(rankings: list[list[int]], k: int = 60) -> dict[int, float]:
+#     scores: dict[int, float] = defaultdict(float)
+#     for ranking in rankings:
+#         for rank, index in enumerate(ranking, 1):
+#             scores[index] += 1.0 / (k + rank)
+#     return scores
 
 
-def load_models() -> tuple[Any, Any]:
-    global _embedder, _reranker
-    if os.getenv("RAG_DISABLE_MODELS") == "1":
-        return None, None
-    try:
-        from sentence_transformers import CrossEncoder, SentenceTransformer
-        if _embedder is None:
-            _embedder = SentenceTransformer(os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-small"))
-        if _reranker is None:
-            _reranker = CrossEncoder(os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"))
-    except Exception:
-        return None, None
-    return _embedder, _reranker
+# def load_models() -> tuple[Any, Any]:
+#     global _embedder, _reranker
+#     if os.getenv("RAG_DISABLE_MODELS") == "1":
+#         return None, None
+#     try:
+#         from sentence_transformers import CrossEncoder, SentenceTransformer
+#         if _embedder is None:
+#             _embedder = SentenceTransformer(os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-small"))
+#         if _reranker is None:
+#             _reranker = CrossEncoder(os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"))
+#     except Exception:
+#         return None, None
+#     return _embedder, _reranker
 
 
 def retrieve(query: str, chunks: list[Chunk], top_k: int) -> list[dict[str, Any]]:
@@ -292,26 +292,40 @@ def retrieve(query: str, chunks: list[Chunk], top_k: int) -> list[dict[str, Any]
     corpus_tokens = [tokenize(c.text) or ["_"] for c in chunks]
     bm25 = BM25Okapi(corpus_tokens)
     bm_scores = np.asarray(bm25.get_scores(tokenize(query) or ["_"]))
-    bm_rank = np.argsort(-bm_scores).tolist()
-    rankings = [bm_rank]
-    embedder, reranker = load_models()
-    if embedder is not None:
-        passages = [f"passage: {c.text}" for c in chunks]
-        doc_vectors = embedder.encode(passages, normalize_embeddings=True, show_progress_bar=False)
-        query_vector = embedder.encode([f"query: {query}"], normalize_embeddings=True, show_progress_bar=False)[0]
-        dense_scores = np.asarray(doc_vectors) @ np.asarray(query_vector)
-        rankings.append(np.argsort(-dense_scores).tolist())
-    fused = reciprocal_rank_fusion(rankings)
-    candidate_ids = sorted(fused, key=fused.get, reverse=True)[: min(30, len(chunks))]
-    if reranker is not None and candidate_ids:
-        pairs = [(query, chunks[i].text) for i in candidate_ids]
-        scores = np.asarray(reranker.predict(pairs, show_progress_bar=False))
-        candidate_ids = [candidate_ids[i] for i in np.argsort(-scores)]
+
+    # Indizes der besten Chunks nach BM25
+    ranked_ids = sorted(range(len(chunks)), key=lambda i: bm_scores[i], reverse=True)[:top_k]
+
     results = []
-    for rank, index in enumerate(candidate_ids[:top_k], 1):
+    for rank, index in enumerate(ranked_ids, 1):
         chunk = chunks[index]
-        results.append({**chunk.model_dump(), "rank": rank, "score": round(float(fused[index]), 6)})
+        results.append({
+            **chunk.model_dump(),
+            "rank": rank,
+            "score": float(bm_scores[index]),
+        })
     return results
+
+    # bm_rank = np.argsort(-bm_scores).tolist()
+    # rankings = [bm_rank]
+    # embedder, reranker = load_models()
+    # if embedder is not None:
+    #     passages = [f"passage: {c.text}" for c in chunks]
+    #     doc_vectors = embedder.encode(passages, normalize_embeddings=True, show_progress_bar=False)
+    #     query_vector = embedder.encode([f"query: {query}"], normalize_embeddings=True, show_progress_bar=False)[0]
+    #     dense_scores = np.asarray(doc_vectors) @ np.asarray(query_vector)
+    #     rankings.append(np.argsort(-dense_scores).tolist())
+    # fused = reciprocal_rank_fusion(rankings)
+    # candidate_ids = sorted(fused, key=fused.get, reverse=True)[: min(30, len(chunks))]
+    # if reranker is not None and candidate_ids:
+    #     pairs = [(query, chunks[i].text) for i in candidate_ids]
+    #     scores = np.asarray(reranker.predict(pairs, show_progress_bar=False))
+    #     candidate_ids = [candidate_ids[i] for i in np.argsort(-scores)]
+    # results = []
+    # for rank, index in enumerate(candidate_ids[:top_k], 1):
+    #     chunk = chunks[index]
+    #     results.append({**chunk.model_dump(), "rank": rank, "score": round(float(fused[index]), 6)})
+    # return results
 
 
 def sse(event: str, data: Any) -> str:
@@ -430,13 +444,23 @@ async def chat(req: ChatRequest, request: Request) -> StreamingResponse:
     )
     system = (
         "Du bist Quellwerk. Antworte auf Deutsch ausschließlich anhand der Fundstellen. "
-        "Wenn die Antwort nicht belegt ist, sage klar, dass sie aus den Quellen nicht beantwortbar ist. "
-        "Setze nach jeder belegbaren Tatsachenbehauptung eine Fundstelle wie [1]. Verwende nur vorhandene Nummern.\n\n"
+        "Wenn die Frage anhand der Fundstellen nicht beantwortbar ist, sage kurz und klar, "
+        "dass sie aus den Quellen nicht beantwortet werden kann. "
+        "Gib in diesem Fall keine Vermutungen oder externes Wissen wieder. "
+        "Setze nach jeder belegbaren Tatsachenbehauptung eine Fundstelle wie [1] und verwende nur vorhandene Nummern. "
+        "Erkläre deinen Denkprozess nicht, gib keine nummerierten Analyseschritte oder 'thinking process' aus, "
+        "sondern nur die eigentliche Antwort.\n\n"
         f"FUNDSTELLEN:\n{context}"
     )
-    messages = [{"role": "system", "content": system}]
-    messages.extend(m.model_dump() for m in req.history[-12:])
-    messages.append({"role": "user", "content": req.query})
+
+    # messages = [{"role": "system", "content": system}]
+    # messages.extend(m.model_dump() for m in req.history[-12:])
+    # messages.append({"role": "user", "content": req.query})
+
+    messages = [
+    {"role": "system", "content": system},
+    {"role": "user", "content": req.query},
+    ]
 
     async def stream():
         yield sse("meta", {"hits": hits})

@@ -560,6 +560,13 @@ function renderChat() {
     appendMessage(m.role, m.content, m.hits || [], false, false),
   );
 }
+function clearChat() {
+  state.messages = [];
+  renderChat();
+  scheduleSave();
+  toast("Chatverlauf gelöscht");
+}
+
 function selectedChunks() {
   const ids =
     state.scope === "active" && state.activeId
@@ -701,6 +708,7 @@ function addNote(text) {
 $("#addSource").onclick = () => openModal("#sourceModal");
 $("#settingsBtn").onclick = () => openModal("#settingsModal");
 $$("[data-close]").forEach((b) => (b.onclick = () => closeModal(b)));
+
 $$(".modal-bg").forEach(
   (m) =>
     (m.onclick = (e) => {
@@ -838,6 +846,11 @@ $$(".tabs button").forEach(
       $("#notes").style.display = notes ? "block" : "none";
     }),
 );
+$("#clearChatBtn").onclick = () => {
+  if (confirm("Möchtest du den kompletten Chatverlauf wirklich löschen?")) {
+    clearChat();
+  }
+};
 $$(".scope button").forEach(
   (b) =>
     (b.onclick = () => {
