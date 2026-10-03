@@ -30,7 +30,7 @@ Requires-Dist: respx==0.22.0; extra == "test"
 [![License: MIT](https://img.shields.io/badge/License-MIT-01696f.svg)](LICENSE)
 
 <!-- Replace these before publishing. -->
-**[Live demo](https://YOUR-DEMO-URL.example)** · **[60-second video](https://YOUR-VIDEO-URL.example)**
+**[Live demo](https://quellwerk.onrender.com/)** · **[Demo video](https://github.com/dominik13579/quellwerk/blob/main/docs/Live-Demo.mp4)**
 
 ![Quellwerk source-grounded research flow](docs/quellwerk-demo.gif)
 
