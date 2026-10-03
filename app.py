@@ -196,9 +196,17 @@ async def fetch_public_html(value: str) -> tuple[str, httpx.Response]:
                     body.extend(part)
                     if len(body) > MAX_IMPORT_BYTES:
                         raise HTTPException(413, "Webseite überschreitet das Importlimit")
+                
+                response_headers = dict(upstream.headers)
+                # Doppelte Dekompression verhindern:
+                response_headers.pop("content-encoding", None)
+                response_headers.pop("Content-Encoding", None)
+                response_headers.pop("content-length", None)
+                response_headers.pop("Content-Length", None)
+
                 response = httpx.Response(
                     upstream.status_code,
-                    headers=upstream.headers,
+                    headers=response_headers,
                     content=bytes(body),
                     request=upstream.request,
                 )
@@ -448,8 +456,10 @@ async def chat(req: ChatRequest, request: Request) -> StreamingResponse:
         "dass sie aus den Quellen nicht beantwortet werden kann. "
         "Gib in diesem Fall keine Vermutungen oder externes Wissen wieder. "
         "Setze nach jeder belegbaren Tatsachenbehauptung eine Fundstelle wie [1] und verwende nur vorhandene Nummern. "
-        "Erkläre deinen Denkprozess nicht, gib keine nummerierten Analyseschritte oder 'thinking process' aus, "
-        "sondern nur die eigentliche Antwort.\n\n"
+        "Gib NIEMALS Moderations- oder Sicherheitslabels wie 'User Safety: safe' oder ähnliche Systemhinweise aus. "
+        "Gib außerdem NIEMALS Abschnitte mit Überschriften wie 'Here is a thinking process', "
+        "'Here’s a thinking process', 'Reasoning', 'Analysis' oder nummerierte Denk-Schritte aus. "
+        "Formuliere ausschließlich die fertige Antwort für den Nutzer.\n\n"
         f"FUNDSTELLEN:\n{context}"
     )
 

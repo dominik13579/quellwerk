@@ -184,7 +184,7 @@ function renderSources() {
   $("#modalDocs").textContent = `${state.sources.length}/${LIMITS.docs}`;
   $("#wordBudget").textContent =
     `${totalWords().toLocaleString("de")} / ${LIMITS.totalWords.toLocaleString("de")} Wörter`;
-  $("#modalWords").textContent = `${Math.round(totalWords() / 1000)}k/500k`;
+  $("#modalWords").textContent = `${totalWords().toLocaleString("de")}/500.000`;
   lucide.createIcons();
 }
 const QUICK = {
@@ -607,7 +607,7 @@ async function ask(query) {
       body: JSON.stringify({
         query,
         chunks,
-        top_k: 8,
+        top_k: 4,
         history: previous,
         model: state.model,
       }),
